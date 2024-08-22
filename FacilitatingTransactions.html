@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .header {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .section {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .status.processing {
+            color: orange;
+        }
+        .status.completed {
+            color: green;
+        }
+        .status.cancelled {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Transaction Management</h1>
+        </div>
+
+        <div class="section">
+            <h2>Order Processing</h2>
+            <table id="orderTable">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Farmer</th>
+                        <th>Retailer</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Money Gathering</h2>
+            <table id="paymentTable">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Order ID</th>
+                        <th>Amount</th>
+                        <th>Payment Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Delivery Scheduling</h2>
+            <table id="deliveryTable">
+                <thead>
+                    <tr>
+                        <th>Delivery ID</th>
+                        <th>Order ID</th>
+                        <th>Delivery Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch and render table data
+        async function fetchAndRenderTable(apiUrl, tableId, updateFunction) {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const tableBody = document.querySelector(`#${tableId} tbody`);
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    Object.keys(item).forEach(key => {
+                        if (key !== 'id') { // Exclude 'id' from data rendering
+                            const cell = document.createElement('td');
+                            cell.textContent = item[key];
+                            row.appendChild(cell);
+                        }
+                    });
+
+                    const statusCell = document.createElement('td');
+                    statusCell.className = `status ${item.status}`;
+                    statusCell.textContent = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+                    row.appendChild(statusCell);
+
+                    const actionCell = document.createElement('td');
+                    actionCell.innerHTML = `
+                        <button class="button" onclick="${updateFunction.name}(${item.id})">${updateFunction.label}</button>
+                    `;
+                    row.appendChild(actionCell);
+
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Function to update order status
+        async function updateOrderStatus(id) {
+            try {
+                const response = await fetch(`/api/orders/${id}/update`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    fetchAndRenderTable('/api/orders', 'orderTable', { name: 'updateOrderStatus', label: 'Update Status' });
+                }
+            } catch (error) {
+                console.error('Error updating order status:', error);
+            }
+        }
+
+        // Function to refund transaction
+        async function refundTransaction(id) {
+            try {
+                const response = await fetch(`/api/payments/${id}/refund`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    fetchAndRenderTable('/api/payments', 'paymentTable', { name: 'refundTransaction', label: 'Refund' });
+                }
+            } catch (error) {
+                console.error('Error refunding transaction:', error);
+            }
+        }
+
+        // Function to complete delivery
+        async function completeDelivery(id) {
+            try {
+                const response = await fetch(`/api/deliveries/${id}/complete`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    fetchAndRenderTable('/api/deliveries', 'deliveryTable', { name: 'completeDelivery', label: 'Complete Delivery' });
+                }
+            } catch (error) {
+                console.error('Error completing delivery:', error);
+            }
+        }
+
+        // Event listener to render tables on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndRenderTable('/api/orders', 'orderTable', { name: 'updateOrderStatus', label: 'Update Status' });
+            fetchAndRenderTable('/api/payments', 'paymentTable', { name: 'refundTransaction', label: 'Refund' });
+            fetchAndRenderTable('/api/deliveries', 'deliveryTable', { name: 'completeDelivery', label: 'Complete Delivery' });
+        });
+    </script>
+</body>
+</html>

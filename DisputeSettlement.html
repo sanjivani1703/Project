@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispute Settlement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .header {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .section {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .status.pending {
+            color: orange;
+        }
+        .status.resolved {
+            color: green;
+        }
+        .status.unresolved {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dispute Settlement</h1>
+        </div>
+
+        <div class="section">
+            <h2>Dispute Cases</h2>
+            <table id="disputeTable">
+                <thead>
+                    <tr>
+                        <th>Dispute ID</th>
+                        <th>Merchant</th>
+                        <th>Farmer</th>
+                        <th>Dispute Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch and render table data
+        async function fetchAndRenderTable(apiUrl, tableId, updateFunctions) {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const tableBody = document.querySelector(`#${tableId} tbody`);
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    Object.keys(item).forEach(key => {
+                        if (key !== 'id') { // Exclude 'id' from data rendering
+                            const cell = document.createElement('td');
+                            cell.textContent = item[key];
+                            row.appendChild(cell);
+                        }
+                    });
+
+                    const statusCell = document.createElement('td');
+                    statusCell.className = `status ${item.status.toLowerCase()}`;
+                    statusCell.textContent = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+                    row.appendChild(statusCell);
+
+                    const actionCell = document.createElement('td');
+                    actionCell.innerHTML = `
+                        <button class="button" onclick="${updateFunctions.resolve.name}(${item.id})">Resolve</button>
+                        <button class="button" onclick="${updateFunctions.reject.name}(${item.id})">Reject</button>
+                    `;
+                    row.appendChild(actionCell);
+
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Function to resolve dispute
+        async function resolveDispute(id) {
+            try {
+                const response = await fetch(`/api/disputes/${id}/resolve`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    fetchAndRenderTable('/api/disputes', 'disputeTable', { resolve: resolveDispute, reject: rejectDispute });
+                }
+            } catch (error) {
+                console.error('Error resolving dispute:', error);
+            }
+        }
+
+        // Function to reject dispute
+        async function rejectDispute(id) {
+            try {
+                const response = await fetch(`/api/disputes/${id}/reject`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    fetchAndRenderTable('/api/disputes', 'disputeTable', { resolve: resolveDispute, reject: rejectDispute });
+                }
+            } catch (error) {
+                console.error('Error rejecting dispute:', error);
+            }
+        }
+
+        // Event listener to render table on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndRenderTable('/api/disputes', 'disputeTable', { resolve: resolveDispute, reject: rejectDispute });
+        });
+    </script>
+</body>
+</html>
